@@ -453,7 +453,6 @@ fn main() {
     .unwrap();
 
   let args: Vec<String> = env::args().collect();
-  println!("{:?}", args);
 
   config.port = 8001;
 
