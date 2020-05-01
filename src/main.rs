@@ -18,6 +18,7 @@ use rocket::http::{Status, ContentType};
 use rocket::response;
 use rocket::response::{Responder, Response};
 use rocket::request::Request;
+use std::env;
 
 mod lp;
 mod index;
@@ -451,7 +452,19 @@ fn main() {
   let mut config = Config::build(Environment::Production)
     .unwrap();
 
+  let args: Vec<String> = env::args().collect();
+  println!("{:?}", args);
+
   config.port = 8001;
+
+  for (i, arg) in args.iter().enumerate() {
+    if arg.cmp(&String::from("--port")) == std::cmp::Ordering::Equal {
+      let port_num = args[i + 1].parse();
+      if !port_num.is_err() {
+        config.port = port_num.unwrap();
+      }
+    }
+  }
 
   let app = rocket::custom(config);
 
