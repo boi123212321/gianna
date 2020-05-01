@@ -170,33 +170,39 @@ fn check_tree_node(tree: &FilterTree, obj: &Value) -> bool {
   return false;
 }
 
+fn get_items(index: &index::Index, query: Option<String>) -> Vec<Value> {
+  let items: Vec<Value>;
+
+  if query.clone().is_some() {
+    println!("Searching '{}'", query.clone().unwrap());
+    let new_items = index::search(&index, String::from(query.clone().unwrap()));
+    let mut vec: Vec<Value> = vec![];
+    for item in new_items {
+      vec.push(parse_json(item));
+    }
+    items = vec;
+  }
+  else {
+    let mut vec: Vec<Value> = vec![];
+    for id in index.items.values() {
+      vec.push(parse_json(id.to_string()));
+    }
+    items = vec;
+  }
+
+  return items;
+}
+
 #[post("/<index_name>/search?<q>&<skip>&<take>", data="<input>")]
 fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String>, skip: Option<u32>, take: Option<u32>) -> ApiResponse {
   let indexes = INDEXES.lock().unwrap();
 
   if indexes.contains_key(&index_name) {
     let index = indexes.get(&index_name).unwrap();
-    let mut items: Vec<Value>;
     let data = input.into_inner();
-    
-    // Get items
-    if q.clone().is_some() {
-      println!("Searching '{}'", q.clone().unwrap());
-      let new_items = index::search(&index, String::from(q.clone().unwrap()));
-      let mut vec: Vec<Value> = vec![];
-      for item in new_items {
-        vec.push(parse_json(item));
-      }
-      items = vec;
-    }
-    else {
-      let mut vec: Vec<Value> = vec![];
-      for id in index.items.values() {
-        vec.push(parse_json(id.to_string()));
-      }
-      items = vec;
-    }
 
+    // Get items
+    let mut items = get_items(&index, q.clone());
     let num_items = items.len();
 
     // Filter items
