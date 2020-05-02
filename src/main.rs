@@ -245,12 +245,15 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
       });
     }
 
+    let _skip = skip.unwrap_or(0) as usize;
+    let _take = take.unwrap_or(2000000) as usize;
+
     // Paginate items
     let page: Vec<_> = items
       .iter_mut()
       .rev()
-      .skip(skip.unwrap_or(0) as usize)
-      .take(take.unwrap_or(200000) as usize)
+      .skip(_skip)
+      .take(_take)
       .collect();
 
     let ids: Vec<_> = page.iter().map(|x| {
@@ -259,6 +262,12 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
       return String::from(raw);
     }).collect();
 
+    let num_pages = if ids.len() < _take { 
+      1 
+    } else {
+      ((num_items / _take) as f32).ceil() as u32 
+    };
+
     return ApiResponse {
       json: json!({
         "status": 200,
@@ -266,7 +275,8 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
         "query": q,
         "items": ids,
         "max_items": num_items,
-        "num_items": ids.len()
+        "num_items": ids.len(),
+        "num_pages": num_pages,
       }),
       status: Status::Ok
     }
