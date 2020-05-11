@@ -100,7 +100,7 @@ fn check_tree_node(tree: &FilterTree, obj: &Value) -> bool {
       }
       return true;
     }
-    else {
+    else if filter_type.cmp(&String::from("OR")) == std::cmp::Ordering::Equal  {
       for child in children {
         let result = check_tree_node(&child, obj);
         if result {
@@ -108,6 +108,10 @@ fn check_tree_node(tree: &FilterTree, obj: &Value) -> bool {
         }
       }
       return false;
+    }
+    else if filter_type.cmp(&String::from("NOT")) == std::cmp::Ordering::Equal  {
+      let result = check_tree_node(&children[0], obj);
+      return !result;
     }
   }
   else {
