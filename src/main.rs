@@ -204,13 +204,13 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
 
     // Get items
     let mut items = get_items(&index, q.clone());
-    let num_items = items.len();
 
     // Filter items
     if data.filter.is_some() {
       let filter_tree = data.filter.unwrap();
       items.retain(|x| check_tree_node(&filter_tree, &x));
     }
+    let num_items = items.len();
 
     // Sort items
     if data.sort_by.is_some() {
