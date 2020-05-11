@@ -126,9 +126,9 @@ fn index_item(index: &mut Index, iid: u32, to_tokenize: String) {
 
   for word in clean_words(to_tokenize.to_string()) {
     if !index.token_scoring.contains_key(&word.clone()) {
-      index.token_scoring.insert(word.to_string(), vec![(iid as u32, 5)]);
+      index.token_scoring.insert(word.to_string(), vec![(iid as u32, 10)]);
     } else {
-      index.token_scoring.get_mut(&word).unwrap().push((iid as u32, 5));
+      index.token_scoring.get_mut(&word).unwrap().push((iid as u32, 10));
     }
   }
 }
