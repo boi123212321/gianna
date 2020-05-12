@@ -9,7 +9,7 @@ extern crate serde_derive;
 extern crate strsim;
 
 use lazy_static::lazy_static;
-use rocket::config::{Config, Environment};
+use rocket::config::{Config, Environment, Limits};
 use rocket_contrib::json::{Json, JsonValue};
 use serde_json::{Value};
 use std::collections::HashMap;
@@ -463,7 +463,12 @@ fn hello() -> Json<JsonValue> {
 }
 
 fn main() {
+  let limits = Limits::new()
+    .limit("forms", 5000000 * 1024 * 1024)
+    .limit("json", 5000000 * 1024 * 1024);
+
   let mut config = Config::build(Environment::Production)
+    .limits(limits)
     .unwrap();
 
   let args: Vec<String> = env::args().collect();
