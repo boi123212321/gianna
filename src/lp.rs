@@ -5,7 +5,7 @@ use regex::Regex;
 
 pub fn get_first_chars(words: Vec<String>) -> Vec<String> {
   return words.iter().map(|word| {
-    let first_char = String::from(word.chars().nth(0).unwrap().to_string());
+    let first_char = String::from(word.chars().nth(0).unwrap("").to_string());
     return String::from(format!("${}", first_char));
   }).collect();
 }
