@@ -1,0 +1,28 @@
+name: Rust Windows
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        rust: [nightly]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install nightly
+        run: rustup toolchain install nightly
+      - name: Build
+        run: cargo +nightly build --release
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            target/release/gianna.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
