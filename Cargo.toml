@@ -16,6 +16,8 @@ regex = "1"
 rust-stemmers = "^1.0"
 ngrams = "1.0.1"
 strsim = "0.10.0"
+md5 = "0.7.0"
+rand = "0.7"
 
 [dependencies.rocket_contrib]
 version = "*"

@@ -7,6 +7,8 @@ extern crate rocket_contrib;
 #[macro_use]
 extern crate serde_derive;
 extern crate strsim;
+extern crate md5;
+extern crate rand;
 
 use lazy_static::lazy_static;
 use rocket::config::{Config, Environment, Limits};
@@ -19,6 +21,8 @@ use rocket::response;
 use rocket::response::{Responder, Response};
 use rocket::request::Request;
 use std::env;
+use rand::seq::SliceRandom;
+use rand::prelude::*;
 
 mod lp;
 mod index;
@@ -225,37 +229,50 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
     }
     let num_items = items.len();
 
+    
     // Sort items
     if data.sort_by.is_some() {
+      // Maybe shuffle
       let sort_prop = data.sort_by.unwrap();
-      let sort_asc = data.sort_asc.unwrap_or(false);
-      let sort_type = data.sort_type.unwrap_or(String::from("number"));
 
-      println!("Sort by {}, ascending: {}, type: {}", sort_prop, sort_asc, sort_type);
-      
-      items.sort_by(|a, b| {
-        if sort_type.cmp(&String::from("number")) == std::cmp::Ordering::Equal {
-          let a_maybe = dot_notation(a, sort_prop.clone());
-          let b_maybe = dot_notation(b, sort_prop.clone());
-          let a_val = a_maybe.as_f64().unwrap_or(0.0);
-          let b_val = b_maybe.as_f64().unwrap_or(0.0);
-          if sort_asc == true {
-            return b_val.partial_cmp(&a_val).unwrap()
-          }
-          return a_val.partial_cmp(&b_val).unwrap()
+      if sort_prop.cmp(&String::from("$shuffle")) == std::cmp::Ordering::Equal {
+        let seed = data.sort_type.unwrap_or(String::from("default"));
+        let hash = format!("{:x}", md5::compute(seed));
+        let mut sum = 0 as u64;
+        for c in hash.chars() {
+          sum += c.to_digit(10).unwrap_or(0) as u64;
         }
-        else if sort_type.cmp(&String::from("string")) == std::cmp::Ordering::Equal {
-          let a_maybe = dot_notation(a, sort_prop.clone());
-          let b_maybe = dot_notation(b, sort_prop.clone());
-          let a_val = a_maybe.as_str().unwrap_or("");
-          let b_val = b_maybe.as_str().unwrap_or("");
-          if sort_asc == true {
-            return b_val.partial_cmp(&a_val).unwrap()
+        let mut rng = StdRng::seed_from_u64(sum);
+        items.shuffle(&mut rng);
+      }
+      else {
+        let sort_asc = data.sort_asc.unwrap_or(false);
+        let sort_type = data.sort_type.unwrap_or(String::from("number"));
+        
+        items.sort_by(|a, b| {
+          if sort_type.cmp(&String::from("number")) == std::cmp::Ordering::Equal {
+            let a_maybe = dot_notation(a, sort_prop.clone());
+            let b_maybe = dot_notation(b, sort_prop.clone());
+            let a_val = a_maybe.as_f64().unwrap_or(0.0);
+            let b_val = b_maybe.as_f64().unwrap_or(0.0);
+            if sort_asc == true {
+              return b_val.partial_cmp(&a_val).unwrap()
+            }
+            return a_val.partial_cmp(&b_val).unwrap()
           }
-          return a_val.partial_cmp(&b_val).unwrap()
-        }
-        return std::cmp::Ordering::Equal;
-      });
+          else if sort_type.cmp(&String::from("string")) == std::cmp::Ordering::Equal {
+            let a_maybe = dot_notation(a, sort_prop.clone());
+            let b_maybe = dot_notation(b, sort_prop.clone());
+            let a_val = a_maybe.as_str().unwrap_or("");
+            let b_val = b_maybe.as_str().unwrap_or("");
+            if sort_asc == true {
+              return b_val.partial_cmp(&a_val).unwrap()
+            }
+            return a_val.partial_cmp(&b_val).unwrap()
+          }
+          return std::cmp::Ordering::Equal;
+        });
+      }
     }
 
     let _skip = skip.unwrap_or(0) as usize;
