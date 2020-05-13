@@ -160,7 +160,10 @@ fn check_tree_node(tree: &FilterTree, obj: &Value) -> bool {
         let other_value = &condition.value;
         return array.contains(other_value);
       }
-      // TODO: check array length
+      else if condition.operation.cmp(&String::from("length")) == std::cmp::Ordering::Equal {
+        let length = condition.value.as_u64().unwrap_or(0) as usize;
+        return array.len() == length;
+      }
     }
 
     if r#type.cmp(&String::from("boolean")) == std::cmp::Ordering::Equal {
@@ -169,6 +172,12 @@ fn check_tree_node(tree: &FilterTree, obj: &Value) -> bool {
       if condition.operation.cmp(&String::from("=")) == std::cmp::Ordering::Equal {
         let other_boolean = condition.value.as_bool().unwrap_or(false);
         return boolean == other_boolean;
+      }
+    }
+
+    if r#type.cmp(&String::from("null")) == std::cmp::Ordering::Equal {
+      if condition.operation.cmp(&String::from("=")) == std::cmp::Ordering::Equal {
+        return value.is_null();
       }
     }
   }
@@ -428,6 +437,37 @@ fn create_index(index_name: String) -> ApiResponse {
   }
 }
 
+#[delete("/<index_name>/delete", rank = 0)]
+fn delete_index(index_name: String) -> Status {
+  let mut indexes = INDEXES.lock().unwrap();
+
+  if indexes.contains_key(&index_name) {
+    indexes.remove(&index_name);
+    return Status::Ok;
+  }
+  return Status::NotFound;
+}
+
+#[delete("/<index_name>/clear", rank = 0)]
+fn clear_index(index_name: String) -> Status {
+  let mut indexes = INDEXES.lock().unwrap();
+
+  if indexes.contains_key(&index_name) {
+    let index = indexes.get_mut(&index_name).unwrap();
+    index::clear(index);
+    return Status::Ok;
+  }
+  return Status::NotFound;
+}
+
+#[delete("/")]
+fn clear_all() -> Status {
+  let mut indexes = INDEXES.lock().unwrap();
+  indexes.clear();
+  indexes.shrink_to_fit();
+  return Status::Ok;
+}
+
 #[get("/<index_name>")]
 fn get_index(index_name: String) -> ApiResponse {
   let indexes = INDEXES.lock().unwrap();
@@ -488,6 +528,6 @@ fn main() {
 
   app
     .mount("/", routes![hello])
-    .mount("/index", routes![delete_items, create_index, get_index, post_items, update_item, search_items])
+    .mount("/index", routes![delete_index, clear_index, clear_all, delete_items, create_index, get_index, post_items, update_item, search_items])
     .launch();
 }

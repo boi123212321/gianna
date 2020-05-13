@@ -11,10 +11,17 @@ use crate::lp::{gramify, clean_words};
 } */
 
 pub struct Index {
-  id_counter: u32,
+  pub id_counter: u32,
   pub items: HashMap<u32, String>,
   pub token_scoring: HashMap<String, Vec<(u32, u8)>>,
   pub id_map: HashMap<String, u32>,
+}
+
+pub fn clear(index: &mut Index) {
+  index.id_counter = 0;
+  index.items = HashMap::new();
+  index.token_scoring = HashMap::new();
+  index.id_map = HashMap::new();
 }
 
 pub fn create() -> Index {
