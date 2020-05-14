@@ -134,6 +134,10 @@ fn check_tree_node(tree: &FilterTree, obj: &Value) -> bool {
         let other_string = &condition.value.as_str().unwrap_or("");
         return string.contains(other_string);
       }
+      else if condition.operation.cmp(&String::from("starts_with")) == std::cmp::Ordering::Equal {
+        let other_string = &condition.value.as_str().unwrap_or("");
+        return string.starts_with(other_string);
+      }
     }
 
     if r#type.cmp(&String::from("number")) == std::cmp::Ordering::Equal {
@@ -515,7 +519,7 @@ fn get_index(index_name: String) -> ApiResponse {
 #[get("/")]
 fn hello() -> Json<JsonValue> {
   Json(json!({
-    "version": "0.0.2"
+    "version": "0.0.3"
   }))
 }
 
