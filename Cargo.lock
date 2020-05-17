@@ -173,7 +173,7 @@ dependencies = [
 
 [[package]]
 name = "gianna"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "lazy_static",
  "md5",
@@ -186,7 +186,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "strsim",
+ "sublime_fuzzy",
 ]
 
 [[package]]
@@ -742,10 +742,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7345c971d1ef21ffdbd103a75990a15eb03604fc8b8852ca8cb418ee1a099028"
 
 [[package]]
-name = "strsim"
-version = "0.10.0"
+name = "sublime_fuzzy"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+checksum = "97bd7ad698ea493a3a7f60c2ffa117c234f341e09f8cc2d39cef10cdde077acf"
 
 [[package]]
 name = "syn"

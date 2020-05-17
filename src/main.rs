@@ -6,9 +6,9 @@ extern crate rocket;
 extern crate rocket_contrib;
 #[macro_use]
 extern crate serde_derive;
-extern crate strsim;
 extern crate md5;
 extern crate rand;
+extern crate sublime_fuzzy;
 
 use lazy_static::lazy_static;
 use rocket::config::{Config, Environment, Limits};
@@ -53,7 +53,6 @@ impl<'r> Responder<'r> for ApiResponse {
 #[derive(Clone, Serialize, Deserialize)]
 struct BulkImport {
   items: Vec<Value>,
-  fields: Vec<String>
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -374,7 +373,6 @@ fn update_item(index_name: String, input: Json<BulkImport>) -> ApiResponse {
       index::update(
         &mut index, 
         item,
-        data.fields.clone(),
       );
     }
 
@@ -408,7 +406,6 @@ fn post_items(index_name: String, input: Json<BulkImport>) -> ApiResponse {
       index::add_object(
         &mut index, 
         item,
-        data.fields.clone(),
       );
     }
 
@@ -431,9 +428,15 @@ fn post_items(index_name: String, input: Json<BulkImport>) -> ApiResponse {
   }
 }
 
-#[put("/<index_name>")]
-fn create_index(index_name: String) -> ApiResponse {
+#[derive(Clone, Serialize, Deserialize)]
+struct CreateIndex {
+  fields: Vec<String>,
+}
+
+#[put("/<index_name>", data="<input>")]
+fn create_index(index_name: String, input: Json<CreateIndex>) -> ApiResponse {
   let mut indexes = INDEXES.lock().unwrap();
+  let data = input.into_inner();
 
   if indexes.contains_key(&index_name) {
     return ApiResponse {
@@ -446,7 +449,7 @@ fn create_index(index_name: String) -> ApiResponse {
     }
   }
   else {
-    let index = index::create();
+    let index = index::create(data.fields);
     indexes.insert(index_name, index);
     return ApiResponse {
       json: json!({
@@ -519,7 +522,7 @@ fn get_index(index_name: String) -> ApiResponse {
 #[get("/")]
 fn hello() -> Json<JsonValue> {
   Json(json!({
-    "version": "0.0.4"
+    "version": "0.1.0"
   }))
 }
 
