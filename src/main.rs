@@ -23,12 +23,22 @@ use rocket::request::Request;
 use std::env;
 use rand::seq::SliceRandom;
 use rand::prelude::*;
+use std::cmp;
 
 mod lp;
 mod index;
 
 lazy_static! {
   static ref INDEXES: Mutex<HashMap<String, index::Index>> = Mutex::new(HashMap::new());
+}
+
+fn calc_pages(max: u32, size: u32) -> u32 {
+  let mf = max as f32;
+  let sf = size as f32;
+  return cmp::max(
+    1,
+    ((mf / sf)).ceil() as u32
+  );
 }
 
 fn parse_json(datastr: String) -> Value {
@@ -231,7 +241,6 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
       items.retain(|x| check_tree_node(&filter_tree, &x));
     }
     let num_items = items.len();
-
     
     // Sort items
     if data.sort_by.is_some() {
@@ -295,11 +304,10 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
       return String::from(raw);
     }).collect();
 
-    let num_pages = if ids.len() < _take { 
-      1 
-    } else {
-      ((num_items / _take) as f32).ceil() as u32 
-    };
+    let num_pages = calc_pages(
+      num_items as u32,
+      _take as u32
+    );
 
     return ApiResponse {
       json: json!({
@@ -522,11 +530,27 @@ fn get_index(index_name: String) -> ApiResponse {
 #[get("/")]
 fn hello() -> Json<JsonValue> {
   Json(json!({
-    "version": "0.1.0"
+    "version": "0.1.1"
   }))
 }
 
 fn main() {
+
+  assert!(calc_pages(1, 1) == 1);
+  assert!(calc_pages(0, 24) == 1);
+  assert!(calc_pages(23, 24) == 1);
+  assert!(calc_pages(10, 24) == 1);
+  assert!(calc_pages(15, 24) == 1);
+  assert!(calc_pages(5, 24) == 1);
+  assert!(calc_pages(48, 24) == 2);
+  assert!(calc_pages(9, 5) == 2);
+  assert!(calc_pages(10, 5) == 2);
+  assert!(calc_pages(14, 5) == 3);
+  assert!(calc_pages(15, 5) == 3);
+  assert!(calc_pages(19, 5) == 4);
+  assert!(calc_pages(20, 5) == 4);
+  assert!(calc_pages(21, 5) == 5);
+
   let limits = Limits::new()
     .limit("forms", 5000000 * 1024 * 1024)
     .limit("json", 5000000 * 1024 * 1024);
