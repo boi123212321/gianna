@@ -1,7 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use serde_json::{Value};
 use sublime_fuzzy::{FuzzySearch};
-// use serde_json::to_string;
 
 use crate::lp::{gramify, clean_words};
 
@@ -15,6 +14,7 @@ pub struct Index {
   pub token_scoring: HashMap<String, Vec<(u32, u8)>>,
   pub id_map: HashMap<String, u32>,
   pub fields: Vec<String>,
+  pub query_times: VecDeque<(u64, u64)>
 }
 
 pub fn clear(index: &mut Index) {
@@ -30,7 +30,8 @@ pub fn create(fields: Vec<String>) -> Index {
     items: HashMap::new(),
     token_scoring: HashMap::new(),
     id_map: HashMap::new(),
-    fields
+    fields,
+    query_times: VecDeque::new()
   }
 }
 
@@ -225,5 +226,6 @@ pub fn search(index: &Index, original_query: String) -> Vec<String> {
     let item = index.items.get(&tuple.0).unwrap().clone();
     real_items.push(item);
   }
+
   return real_items;
 }

@@ -24,6 +24,7 @@ use std::env;
 use rand::seq::SliceRandom;
 use rand::prelude::*;
 use std::cmp;
+use std::time::{SystemTime, Instant};
 
 mod lp;
 mod index;
@@ -133,23 +134,29 @@ fn check_tree_node(tree: &FilterTree, obj: &Value) -> bool {
     let value = dot_notation(obj, condition.property.clone());
 
     if r#type.cmp(&String::from("string")) == std::cmp::Ordering::Equal {
-      let string = value.as_str().unwrap_or("");
+      if value.as_str().is_none() {
+        return false;
+      }
+
+      let string = value.as_str().unwrap();
+      let other_string = &condition.value.as_str().unwrap_or("");
 
       if condition.operation.cmp(&String::from("=")) == std::cmp::Ordering::Equal {
-        let other_string = &condition.value.as_str().unwrap_or("");
         return string.cmp(other_string) == std::cmp::Ordering::Equal;
       }
       else if condition.operation.cmp(&String::from("?")) == std::cmp::Ordering::Equal {
-        let other_string = &condition.value.as_str().unwrap_or("");
         return string.contains(other_string);
       }
       else if condition.operation.cmp(&String::from("starts_with")) == std::cmp::Ordering::Equal {
-        let other_string = &condition.value.as_str().unwrap_or("");
         return string.starts_with(other_string);
       }
     }
 
     if r#type.cmp(&String::from("number")) == std::cmp::Ordering::Equal {
+      if value.as_f64().is_none() {
+        return false;
+      }
+
       let number = if value.is_f64() { 
         value.as_f64().unwrap_or(0.0) 
       } else { 
@@ -171,7 +178,11 @@ fn check_tree_node(tree: &FilterTree, obj: &Value) -> bool {
     }
 
     if r#type.cmp(&String::from("array")) == std::cmp::Ordering::Equal {
-      let array: Vec<Value> = value.as_array().unwrap_or(&Vec::new()).to_vec();
+      if value.as_array().is_none() {
+        return false;
+      }
+
+      let array: Vec<Value> = value.as_array().unwrap().to_vec();
 
       if condition.operation.cmp(&String::from("?")) == std::cmp::Ordering::Equal {
         let other_value = &condition.value;
@@ -224,12 +235,40 @@ fn get_items(index: &index::Index, query: Option<String>) -> Vec<Value> {
   return items;
 }
 
-#[post("/<index_name>/search?<q>&<skip>&<take>", data="<input>")]
-fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String>, skip: Option<u32>, take: Option<u32>) -> ApiResponse {
+#[get("/<index_name>/times")]
+fn get_times(index_name: String) -> ApiResponse {
   let indexes = INDEXES.lock().unwrap();
 
   if indexes.contains_key(&index_name) {
     let index = indexes.get(&index_name).unwrap();
+  
+    return ApiResponse {
+      json: json!({
+        "status": 200,
+        "query_times": index.query_times
+      }),
+      status: Status::Ok
+    }
+  }
+  else {
+    return ApiResponse {
+      json: json!({
+        "status": 404,
+        "message": "Index not found"
+      }),
+      status: Status::NotFound
+    }
+  }
+}
+
+#[post("/<index_name>/search?<q>&<skip>&<take>", data="<input>")]
+fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String>, skip: Option<u32>, take: Option<u32>) -> ApiResponse {
+  let now = Instant::now();
+
+  let mut indexes = INDEXES.lock().unwrap();
+
+  if indexes.contains_key(&index_name) {
+    let index = indexes.get_mut(&index_name).unwrap();
     let data = input.into_inner();
 
     // Get items
@@ -275,12 +314,12 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
           else if sort_type.cmp(&String::from("string")) == std::cmp::Ordering::Equal {
             let a_maybe = dot_notation(a, sort_prop.clone());
             let b_maybe = dot_notation(b, sort_prop.clone());
-            let a_val = a_maybe.as_str().unwrap_or("");
-            let b_val = b_maybe.as_str().unwrap_or("");
+            let a_val = a_maybe.as_str().unwrap_or("").to_lowercase();
+            let b_val = b_maybe.as_str().unwrap_or("").to_lowercase();
             if sort_asc == true {
-              return b_val.partial_cmp(&a_val).unwrap()
+              return b_val.cmp(&a_val);
             }
-            return a_val.partial_cmp(&b_val).unwrap()
+            return a_val.cmp(&b_val);
           }
           return std::cmp::Ordering::Equal;
         });
@@ -308,6 +347,15 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
       num_items as u32,
       _take as u32
     );
+
+    let timestamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
+    let query_time = now.elapsed().as_nanos() as u64;
+    index.query_times.push_back(
+      (timestamp, query_time)
+    );
+    if index.query_times.len() > 2500 {
+      index.query_times.pop_front().unwrap();
+    }
 
     return ApiResponse {
       json: json!({
@@ -530,7 +578,7 @@ fn get_index(index_name: String) -> ApiResponse {
 #[get("/")]
 fn hello() -> Json<JsonValue> {
   Json(json!({
-    "version": "0.1.1"
+    "version": "0.2.0"
   }))
 }
 
@@ -576,6 +624,6 @@ fn main() {
 
   app
     .mount("/", routes![hello])
-    .mount("/index", routes![delete_index, clear_index, clear_all, delete_items, create_index, get_index, post_items, update_item, search_items])
+    .mount("/index", routes![get_times, delete_index, clear_index, clear_all, delete_items, create_index, get_index, post_items, update_item, search_items])
     .launch();
 }
