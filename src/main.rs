@@ -337,11 +337,12 @@ fn search_items(index_name: String, input: Json<SearchOptions>, q: Option<String
       .take(_take)
       .collect();
 
-    let ids: Vec<_> = page.iter().map(|x| {
+    let mut ids: Vec<_> = page.iter().map(|x| {
       let obj = parse_json(x.to_string());
       let raw = obj["_id"].as_str().unwrap();
       return String::from(raw);
     }).collect();
+    ids.dedup_by(|a, b| a.cmp(&b) == std::cmp::Ordering::Equal);
 
     let num_pages = calc_pages(
       num_items as u32,
@@ -578,7 +579,7 @@ fn get_index(index_name: String) -> ApiResponse {
 #[get("/")]
 fn hello() -> Json<JsonValue> {
   Json(json!({
-    "version": "0.2.0"
+    "version": "0.2.1"
   }))
 }
 
