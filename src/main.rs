@@ -579,7 +579,8 @@ fn get_index(index_name: String) -> ApiResponse {
 #[get("/")]
 fn hello() -> Json<JsonValue> {
   Json(json!({
-    "version": "0.2.1"
+    "name": "gianna",
+    "version": "0.2.2"
   }))
 }
 
